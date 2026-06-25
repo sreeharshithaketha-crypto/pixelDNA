@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embed Watermark - PixelDNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">PixelDNA</div>
+        </div>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('upload') }}" class="active">Watermark</a>
+            <a href="{{ url_for('verify') }}">Verify</a>
+            <a href="{{ url_for('audit') }}">Audit Logs</a>
+            <a href="{{ url_for('logout') }}" class="nav-btn" style="border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger);">Logout</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <div class="glass-card">
+            <h2>Embed Watermark</h2>
+            <p class="subtitle" style="margin-bottom: 24px;">Upload an image to embed a DWT-DCT secure signature</p>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <ul class="flash-messages">
+                  {% for m in messages %}
+                    <li class="flash-message success">{{ m }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+
+            {% if not watermarked_url %}
+            <form method="POST" enctype="multipart/form-data">
+                <div class="file-upload-wrapper">
+                    <div class="file-upload-icon">📁</div>
+                    <div class="file-upload-text">
+                        <span>Click to browse</span> or drag and drop image here
+                    </div>
+                    <input type="file" name="image" accept="image/*" required onchange="updateFileName(this)">
+                    <div id="file-name" style="margin-top: 10px; font-size: 13px; color: var(--accent-cyan); font-weight: 500;"></div>
+                </div>
+                <button type="submit" class="btn">Generate & Embed Watermark</button>
+            </form>
+            {% else %}
+            <div class="download-section">
+                <div class="download-info">
+                    <strong>Signature Successfully Embedded!</strong>
+                    <p style="margin-top: 8px;"><strong>Watermark Key:</strong> <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; color: var(--accent-cyan);">{{ watermark_text }}</code></p>
+                    <p style="margin-top: 4px;"><strong>Bit Length:</strong> {{ wm_bits }} bits</p>
+                </div>
+                <a href="{{ watermarked_url }}" download class="btn" style="background: linear-gradient(135deg, var(--success), #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+                    📥 Download Watermarked Image
+                </a>
+                <a href="{{ url_for('verify') }}" class="btn btn-secondary" style="width: 100%;">
+                    🔍 Test in Tamper Detector
+                </a>
+            </div>
+            <div style="text-align: center; margin-top: 24px;">
+                <a href="{{ url_for('upload') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 14px;">&larr; Watermark another image</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function updateFileName(input) {
+            const fileNameDiv = document.getElementById('file-name');
+            if (input.files && input.files.length > 0) {
+                fileNameDiv.textContent = 'Selected: ' + input.files[0].name;
+            } else {
+                fileNameDiv.textContent = '';
+            }
+        }
+    </script>
+
+    <footer>
+        &copy; 2026 PixelDNA Core. All rights reserved. Secure Media Verification Suite.
+    </footer>
+</body>
+</html>

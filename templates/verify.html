@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Image - PixelDNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">PixelDNA</div>
+        </div>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('upload') }}">Watermark</a>
+            <a href="{{ url_for('verify') }}" class="active">Verify</a>
+            <a href="{{ url_for('audit') }}">Audit Logs</a>
+            <a href="{{ url_for('logout') }}" class="nav-btn" style="border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger);">Logout</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <div class="glass-card wide">
+            <h2>Image Authenticity & Tamper Detection</h2>
+            <p class="subtitle" style="margin-bottom: 32px;">Upload the reference and suspect images to inspect structure, compression, and watermarks</p>
+
+            {% if not result %}
+            <form method="POST" enctype="multipart/form-data">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                    <div>
+                        <h3 style="margin-bottom: 12px; font-size: 15px; color: var(--text-primary);">1. Reference/Original Image</h3>
+                        <div class="file-upload-wrapper">
+                            <div class="file-upload-icon" style="font-size: 24px;">📁</div>
+                            <div class="file-upload-text">Select original file</div>
+                            <input type="file" name="original" accept="image/*" required onchange="updateLabel(this, 'label-orig')">
+                            <div id="label-orig" style="margin-top: 8px; font-size: 12px; color: var(--accent-cyan);"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom: 12px; font-size: 15px; color: var(--text-primary);">2. Suspect/Altered Image</h3>
+                        <div class="file-upload-wrapper">
+                            <div class="file-upload-icon" style="font-size: 24px;">📁</div>
+                            <div class="file-upload-text">Select suspect file</div>
+                            <input type="file" name="suspect" accept="image/*" required onchange="updateLabel(this, 'label-susp')">
+                            <div id="label-susp" style="margin-top: 8px; font-size: 12px; color: var(--accent-cyan);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 32px;">
+                    <label for="custom_watermark">Expected Watermark Signature (Optional)</label>
+                    <input type="text" id="custom_watermark" name="custom_watermark" placeholder="Enter original signature if renamed (e.g. user_abcd)">
+                    <span style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">If left blank, PixelDNA will attempt to auto-resolve the watermark key from its database history.</span>
+                </div>
+
+                <button type="submit" class="btn">Run Verification Engine</button>
+            </form>
+            {% else %}
+            
+            <div class="verdict-banner {% if result.tampered %}tampered{% else %}authentic{% endif %}">
+                {% if result.tampered %}
+                    ⚠️ Verdict: TAMPERED / SUSPICIOUS
+                {% else %}
+                    ✅ Verdict: AUTHENTIC / SECURE
+                {% endif %}
+            </div>
+
+            <div class="comparison-grid">
+                <div class="image-card">
+                    <span>Reference Image</span>
+                    <img src="{{ original_url }}" alt="Original image reference">
+                </div>
+                <div class="image-card">
+                    <span>Suspect Image</span>
+                    <img src="{{ suspect_url }}" alt="Suspect image suspect">
+                </div>
+                <div class="image-card">
+                    <span>Error Level Analysis Map</span>
+                    <img src="{{ ela_url }}" alt="ELA compression difference map">
+                </div>
+            </div>
+
+            <div class="results-card">
+                <h3 style="margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Analysis Metrics & Signatures</h3>
+                
+                <div class="indicator-grid">
+                    <div class="indicator-card">
+                        <div class="indicator-label">Perceptual Hash Comparison</div>
+                        <div class="indicator-value {% if result.hash_diff > 10 %}fail{% else %}pass{% endif %}" style="margin-bottom: 8px;">
+                            pHash Difference: {{ result.hash_diff }}
+                        </div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">
+                            Threshold: &le; 10 | Status: {% if result.hash_diff > 10 %}Failed (Structural Mismatch){% else %}Passed (Identical Origin Structure){% endif %}
+                        </div>
+                    </div>
+
+                    <div class="indicator-card">
+                        <div class="indicator-label">Watermark Extracter</div>
+                        <div class="indicator-value {% if result.watermark_extracted != expected_wm %}fail{% else %}pass{% endif %}" style="margin-bottom: 8px; word-break: break-all;">
+                            Extracted: "{{ result.watermark_extracted }}"
+                        </div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">
+                            Expected: "{{ expected_wm }}" | Status: {% if result.watermark_extracted != expected_wm %}Failed (Signature Corrupted/Forged){% else %}Passed (Author Signature Verified){% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="indicator-card" style="margin-top: 16px;">
+                    <div class="indicator-label">Error Level Analysis (ELA)</div>
+                    <div class="indicator-value" style="color: var(--accent-cyan); margin-bottom: 8px;">
+                        Max Compression Difference: {{ result.ela_max_diff }}
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        Highlights pixel groupings where JPEG compression differences indicate editing. Extreme color patterns on the ELA map indicate local image modifications.
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="{{ url_for('verify') }}" class="btn btn-secondary" style="width: auto; padding: 12px 32px;">&larr; Run Another Analysis</a>
+            </div>
+
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function updateLabel(input, labelId) {
+            const label = document.getElementById(labelId);
+            if (input.files && input.files.length > 0) {
+                label.textContent = 'Selected: ' + input.files[0].name;
+            } else {
+                label.textContent = '';
+            }
+        }
+    </script>
+
+    <footer>
+        &copy; 2026 PixelDNA Core. All rights reserved. Secure Media Verification Suite.
+    </footer>
+</body>
+</html>

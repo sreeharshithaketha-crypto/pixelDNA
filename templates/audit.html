@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs - PixelDNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">PixelDNA</div>
+        </div>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('upload') }}">Watermark</a>
+            <a href="{{ url_for('verify') }}">Verify</a>
+            <a href="{{ url_for('audit') }}" class="active">Audit Logs</a>
+            <a href="{{ url_for('logout') }}" class="nav-btn" style="border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger);">Logout</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <div class="glass-card wide">
+            <h2>Activity Audit History</h2>
+            <p class="subtitle" style="margin-bottom: 32px;">Chronological trail of security operations performed on your account</p>
+
+            {% if logs %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>Operation Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td style="color: var(--text-secondary); width: 180px;">{{ log[4] }}</td>
+                            <td style="width: 150px;">
+                                {% set action_lower = log[2]|lower %}
+                                {% if 'register' in action_lower %}
+                                    <span class="badge register">Register</span>
+                                {% elif 'login' in action_lower %}
+                                    <span class="badge login">Login</span>
+                                {% elif 'logout' in action_lower %}
+                                    <span class="badge logout">Logout</span>
+                                {% elif 'watermark' in action_lower %}
+                                    <span class="badge watermark">Watermark</span>
+                                {% elif 'verify' in action_lower %}
+                                    <span class="badge verify">Verify</span>
+                                {% else %}
+                                    <span class="badge" style="background-color: rgba(255,255,255,0.08);">{{ log[2] }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="word-break: break-all;">{{ log[3] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                <p>No activity logs found for your account yet.</p>
+                <p style="font-size: 13px; margin-top: 8px;">Logs will appear here once you embed watermarks or run verification tests.</p>
+            </div>
+            {% endif %}
+
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary" style="width: auto; padding: 12px 32px;">&larr; Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 PixelDNA Core. All rights reserved. Secure Media Verification Suite.
+    </footer>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PixelDNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">PixelDNA</div>
+        </div>
+        <nav>
+            <a href="{{ url_for('dashboard') }}" class="active">Dashboard</a>
+            <a href="{{ url_for('upload') }}">Watermark</a>
+            <a href="{{ url_for('verify') }}">Verify</a>
+            <a href="{{ url_for('audit') }}">Audit Logs</a>
+            <a href="{{ url_for('logout') }}" class="nav-btn" style="border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger);">Logout</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <div style="width: 100%; max-width: 1000px; margin-bottom: 24px;">
+            <h2 style="text-align: left; margin-bottom: 8px;">Welcome, {{ username }}</h2>
+            <p style="color: var(--text-secondary); font-size: 15px;">Access your secure media authentication tools below.</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class="flash-messages" style="max-width: 1000px;">
+              {% for m in messages %}
+                <li class="flash-message success">{{ m }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <div class="dashboard-grid">
+            <a href="{{ url_for('upload') }}" class="dashboard-card">
+                <div class="dashboard-card-icon">🔐</div>
+                <div class="dashboard-card-title">Watermark Embedder</div>
+                <div class="dashboard-card-desc">
+                    Embed an invisible, robust digital signature inside an image utilizing Discrete Wavelet and Cosine Transforms. Protect copyright and verify ownership.
+                </div>
+                <span style="color: var(--accent-blue); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">Launch Tool &rarr;</span>
+            </a>
+
+            <a href="{{ url_for('verify') }}" class="dashboard-card">
+                <div class="dashboard-card-icon">🔍</div>
+                <div class="dashboard-card-title">Tamper Detector</div>
+                <div class="dashboard-card-desc">
+                    Upload an original and a suspect image to run structural checks, extract signatures, and generate Error Level Analysis (ELA) compression maps.
+                </div>
+                <span style="color: var(--accent-cyan); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">Launch Tool &rarr;</span>
+            </a>
+
+            <a href="{{ url_for('audit') }}" class="dashboard-card">
+                <div class="dashboard-card-icon">📝</div>
+                <div class="dashboard-card-title">Audit History</div>
+                <div class="dashboard-card-desc">
+                    Review your account's activities. Trace registration events, logins, embedded watermarks, and verification tests recorded in the audit logging trail.
+                </div>
+                <span style="color: var(--success); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">View Logs &rarr;</span>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 PixelDNA Core. All rights reserved. Secure Media Verification Suite.
+    </footer>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PixelDNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">PixelDNA</div>
+        </div>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('register') }}">Register</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <div class="glass-card">
+            <h2>Welcome Back</h2>
+            <p class="subtitle" style="margin-bottom: 24px;">Log in to access the PixelDNA dashboard</p>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <ul class="flash-messages">
+                  {% for m in messages %}
+                    <li class="flash-message error">{{ m }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter username" required autofocus>
+                </div>
+                <div class="form-group" style="margin-bottom: 32px;">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn" style="margin-bottom: 16px;">Login</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 16px;">
+                <a href="{{ url_for('register') }}" style="color: var(--accent-cyan); text-decoration: none; font-size: 14px;">Don't have an account? Register here</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 PixelDNA Core. All rights reserved. Secure Media Verification Suite.
+    </footer>
+</body>
+</html>
