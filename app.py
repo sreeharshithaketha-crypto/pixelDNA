@@ -209,4 +209,4 @@ if __name__ == "__main__":
     os.makedirs(os.path.join("static", "verify_runs"), exist_ok=True)
     os.makedirs(os.path.join("static", "watermarked"), exist_ok=True)
     
-    app.run(debug=True)
+    app.run(debug=False)
