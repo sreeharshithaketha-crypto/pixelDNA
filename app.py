@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import os
 import sys
@@ -6,7 +6,7 @@ import sqlite3
 import uuid
 from werkzeug.utils import secure_filename
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modules'))
 
 from auth import User, init_db, register_user, verify_user, init_watermarks_table, save_watermark, get_watermark
 from audit import init_audit_table, log_action, get_audit_log
@@ -23,6 +23,14 @@ login_manager.login_view = "login"
 
 UPLOAD_FOLDER = "uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# Initialize everything HERE — runs whether gunicorn or direct
+init_db()
+init_audit_table()
+init_watermarks_table()
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(os.path.join("static", "verify_runs"), exist_ok=True)
+os.makedirs(os.path.join("static", "watermarked"), exist_ok=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -94,7 +102,8 @@ def upload():
     watermarked_url = None
     watermark_text = None
     wm_bits = None
-    
+    out_filename = None
+
     if request.method == "POST":
         file = request.files["image"]
         if file:
@@ -104,27 +113,34 @@ def upload():
 
             watermark_text = f"{current_user.username}_{os.urandom(2).hex()}"
             wm_bits = len(watermark_text.encode('utf-8')) * 8
-            
+
             out_filename = f"watermarked_{sec_name}"
-            # Force lossless container (.png) for DWT-DCT watermarking
             if not out_filename.lower().endswith('.png'):
                 base, _ = os.path.splitext(out_filename)
                 out_filename = base + ".png"
-                
+
             output_path = os.path.join("static", "watermarked", out_filename)
 
             embed_watermark(input_path, watermark_text, output_path)
-            
-            # Save both keys in DB for lookups
+
             save_watermark(current_user.username, out_filename, watermark_text, wm_bits)
             save_watermark(current_user.username, file.filename, watermark_text, wm_bits)
-            
+
             log_action(current_user.username, "WATERMARK_EMBED", f"{file.filename} -> {out_filename}")
 
             watermarked_url = url_for('static', filename=f'watermarked/{out_filename}')
-            flash(f"Image watermarked successfully!")
-            
-    return render_template("upload.html", watermarked_url=watermarked_url, watermark_text=watermark_text, wm_bits=wm_bits)
+            flash(f"Image watermarked successfully! Signature: {watermark_text}")
+
+    return render_template("upload.html", watermarked_url=watermarked_url, watermark_text=watermark_text, wm_bits=wm_bits, out_filename=out_filename)
+
+@app.route("/download/<path:filename>")
+@login_required
+def download(filename):
+    file_path = os.path.join("static", "watermarked", filename)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    flash("File not found.")
+    return redirect(url_for("dashboard"))
 
 @app.route("/verify", methods=["GET", "POST"])
 @login_required
@@ -134,7 +150,7 @@ def verify():
     suspect_url = None
     ela_url = None
     expected_wm = None
-    
+
     if request.method == "POST":
         original = request.files["original"]
         suspect = request.files["suspect"]
@@ -144,25 +160,24 @@ def verify():
             uid = uuid.uuid4().hex
             orig_sec = secure_filename(original.filename)
             susp_sec = secure_filename(suspect.filename)
-            
+
             _, orig_ext = os.path.splitext(orig_sec)
             _, susp_ext = os.path.splitext(susp_sec)
             if not orig_ext: orig_ext = ".png"
             if not susp_ext: susp_ext = ".png"
-            
+
             orig_filename = f"original_{uid}{orig_ext}"
             susp_filename = f"suspect_{uid}{susp_ext}"
             ela_filename = f"ela_{uid}.jpg"
-            
+
             verify_runs_dir = os.path.join("static", "verify_runs")
             original_path = os.path.join(verify_runs_dir, orig_filename)
             suspect_path = os.path.join(verify_runs_dir, susp_filename)
             ela_path = os.path.join(verify_runs_dir, ela_filename)
-            
+
             original.save(original_path)
             suspect.save(suspect_path)
-            
-            # Watermark resolution logic
+
             if custom_watermark:
                 expected_wm = custom_watermark
                 wm_bits = len(expected_wm.encode('utf-8')) * 8
@@ -180,33 +195,24 @@ def verify():
                         wm_bits = wm_data_orig[1]
                     else:
                         expected_wm = ""
-                        wm_bits = 72 # default fallback
-            
+                        wm_bits = 72
+
             result = run_detection(original_path, suspect_path, expected_watermark=expected_wm, wm_length_bits=wm_bits, ela_output_path=ela_path)
-            
+
             original_url = url_for('static', filename=f'verify_runs/{orig_filename}')
             suspect_url = url_for('static', filename=f'verify_runs/{susp_filename}')
             ela_url = url_for('static', filename=f'verify_runs/{ela_filename}')
-            
+
             log_action(current_user.username, "VERIFY", f"Checked {suspect.filename} against {original.filename}")
-            
+
     return render_template("verify.html", result=result, original_url=original_url, suspect_url=suspect_url, ela_url=ela_url, expected_wm=expected_wm)
 
 @app.route("/audit")
 @login_required
 def audit():
     logs = get_audit_log(current_user.username)
-    # Sort logs by timestamp descending
     logs = sorted(logs, key=lambda x: x[4], reverse=True)
     return render_template("audit.html", logs=logs)
 
 if __name__ == "__main__":
-    init_db()
-    init_audit_table()
-    init_watermarks_table()
-    
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(os.path.join("static", "verify_runs"), exist_ok=True)
-    os.makedirs(os.path.join("static", "watermarked"), exist_ok=True)
-    
     app.run(debug=False)
